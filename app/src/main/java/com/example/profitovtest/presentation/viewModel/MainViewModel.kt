@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.profitovtest.data.entities.Entry
 import com.example.profitovtest.data.entities.HotListId
 import com.example.profitovtest.data.repository.MainRepository
 import com.example.profitovtest.utils.NetworkState
@@ -17,6 +18,38 @@ class MainViewModel(
     private val _hotList: MutableLiveData<NetworkState<HotListId>> = MutableLiveData()
     val hotList : LiveData<NetworkState<HotListId>>
         get() = _hotList
+
+    private val _post: MutableLiveData<NetworkState<Entry>> = MutableLiveData()
+    val post : LiveData<NetworkState<Entry>>
+        get() = _post
+
+    fun getCurrentPost(postId: Int){
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                mainRepository.getCurrentPost(postId).let { response ->
+                    if (response.isSuccessful) {
+                        if (response.body() !== null) {
+                            _post.postValue(NetworkState.Success(response.body()!!))
+                        } else {
+                            _post.postValue(NetworkState.InvalidData)
+                        }
+                    } else {
+                        when (response.code()) {
+                            403 -> _post.postValue(NetworkState.HttpErrors.ResourceForbidden(response.message()))
+                            404 -> _post.postValue(NetworkState.HttpErrors.ResourceNotFound(response.message()))
+                            500 -> _post.postValue(NetworkState.HttpErrors.InternalServerError(response.message()))
+                            502 -> _post.postValue(NetworkState.HttpErrors.BadGateWay(response.message()))
+                            301 -> _post.postValue(NetworkState.HttpErrors.ResourceRemoved(response.message()))
+                            302 -> _post.postValue(NetworkState.HttpErrors.RemovedResourceFound(response.message()))
+                            else -> _post.postValue(NetworkState.Error(response.message()))
+                        }
+                    }
+                }
+            } catch (error: IOException) {
+                _post.postValue(NetworkState.NetworkException(error.message))
+            }
+        }
+    }
 
     fun getHotList() {
         viewModelScope.launch(Dispatchers.IO) {

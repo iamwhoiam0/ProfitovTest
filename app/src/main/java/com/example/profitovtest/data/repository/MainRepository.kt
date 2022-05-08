@@ -6,4 +6,5 @@ class MainRepository (private val retrofitService: RetrofitService){
 
     suspend fun getList() = retrofitService.getList()
 
+    suspend fun getCurrentPost(postId: Int) = retrofitService.getCurrentPost(postId)
 }
